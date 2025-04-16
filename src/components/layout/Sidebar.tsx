@@ -2,8 +2,9 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { FileArchive, FileText, Youtube, Upload, Plus } from "lucide-react";
+import { FileArchive, FileText, Youtube, Upload, Plus, FileCheck } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Card } from "@/components/ui/card";
 
 export const Sidebar = () => {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ export const Sidebar = () => {
       <div className="p-4">
         <h2 className="text-xl font-bold flex items-center gap-2 text-primary">
           <FileArchive className="h-5 w-5" />
-          <span>Ask Anything Archive</span>
+          <span>Document Assistant</span>
         </h2>
       </div>
       
@@ -23,48 +24,58 @@ export const Sidebar = () => {
       <div className="p-4">
         <Button 
           variant="default" 
-          className="w-full justify-start gap-2 bg-accent hover:bg-accent/90"
+          className="w-full justify-start gap-2 bg-primary hover:bg-primary/90"
           onClick={() => navigate("/upload")}
         >
           <Plus className="h-4 w-4" />
-          Add New Content
+          <span>Add New Document</span>
         </Button>
       </div>
       
       <Separator />
       
-      <ScrollArea className="h-[calc(100vh-140px)]">
-        <div className="p-4 space-y-4">
-          <h3 className="font-medium text-sm text-muted-foreground mb-2">Your Content</h3>
-          
-          <div className="space-y-1">
+      <div className="p-4">
+        <h3 className="text-sm font-medium text-muted-foreground mb-3">Available Documents</h3>
+        
+        <div className="space-y-2">
+          <Card className="bg-secondary/50 border-primary/20 hover:bg-secondary">
             <Button 
-              variant={location.pathname === "/" ? "secondary" : "ghost"} 
-              className="w-full justify-start gap-2"
+              variant={location.pathname === "/" ? "ghost" : "ghost"} 
+              className="w-full justify-start gap-2 p-3"
               onClick={() => navigate("/")}
             >
-              <FileText className="h-4 w-4" />
-              <span>Sample Document.pdf</span>
+              <FileCheck className="h-4 w-4 text-primary" />
+              <div className="text-left">
+                <p className="font-medium">Sample Document.pdf</p>
+                <p className="text-xs text-muted-foreground">Example document for testing</p>
+              </div>
             </Button>
-            
+          </Card>
+          
+          <Card className="bg-secondary/20 border-muted hover:bg-secondary/30">
             <Button 
               variant="ghost" 
-              className="w-full justify-start gap-2 text-muted-foreground"
+              className="w-full justify-start gap-2 p-3"
+              disabled
             >
-              <Youtube className="h-4 w-4" />
-              <span>YouTube Introduction</span>
+              <Youtube className="h-4 w-4 text-muted-foreground" />
+              <div className="text-left">
+                <p className="font-medium">Upload a YouTube video</p>
+                <p className="text-xs text-muted-foreground">Add from the upload page</p>
+              </div>
             </Button>
-            
-            <Button 
-              variant="ghost" 
-              className="w-full justify-start gap-2 text-muted-foreground"
-            >
-              <FileText className="h-4 w-4" />
-              <span>Notes.txt</span>
-            </Button>
-          </div>
+          </Card>
         </div>
-      </ScrollArea>
+      </div>
+      
+      <div className="px-4 mt-4">
+        <Separator />
+        <div className="mt-4 text-center">
+          <p className="text-xs text-muted-foreground">
+            Upload documents to ask questions about their content
+          </p>
+        </div>
+      </div>
     </div>
   );
 };

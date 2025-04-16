@@ -16,9 +16,14 @@ export const getApiKey = () => openaiApiKey;
 export const askQuestionAboutDocument = async (
   documentContent: string,
   question: string
-) => {
-  // No API key check needed for local processing
+): Promise<string> => {
   try {
+    // Validate inputs
+    if (!documentContent || !question) {
+      console.error("Missing document content or question");
+      return "I need both a document and a question to provide an answer.";
+    }
+
     // Convert question and content to lowercase for case-insensitive matching
     const lowercaseQuestion = question.toLowerCase();
     const lowercaseContent = documentContent.toLowerCase();
@@ -30,6 +35,11 @@ export const askQuestionAboutDocument = async (
       .filter(word => 
         !['what', 'who', 'where', 'when', 'why', 'how', 'is', 'are', 'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for'].includes(word)
       );
+    
+    // If no meaningful keywords were found, provide a generic response
+    if (questionWords.length === 0) {
+      return "I need more specific keywords in your question to search the document effectively.";
+    }
     
     // Find paragraphs that contain question keywords
     const paragraphs = documentContent.split(/\n\s*\n/); // Split by paragraph breaks
@@ -65,11 +75,20 @@ export const askQuestionAboutDocument = async (
     }
     
     // Format the answer
-    const answer = `Based on the document content, here's what I found:
-
-${relevantParagraphs.map((p, i) => `Relevant excerpt ${i+1}: ${p.trim()}`).join('\n\n')}`;
+    let answer = `Based on the document content, I found the following relevant information:\n\n`;
     
-    return answer;
+    // Add each relevant paragraph as a separate section
+    relevantParagraphs.forEach((paragraph, i) => {
+      // Trim and clean up the paragraph
+      const cleanParagraph = paragraph.trim().replace(/\s+/g, ' ');
+      
+      // Only include non-empty paragraphs
+      if (cleanParagraph.length > 0) {
+        answer += `${cleanParagraph}\n\n`;
+      }
+    });
+    
+    return answer.trim();
   } catch (error) {
     console.error("Error processing document question:", error);
     return "An error occurred when processing your question. Please try again.";

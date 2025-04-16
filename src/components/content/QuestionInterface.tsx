@@ -1,10 +1,13 @@
-import { useState } from "react";
+
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, HelpCircle } from "lucide-react";
 import { askQuestionAboutDocument } from "@/services/aiService";
 import { toast } from "sonner";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface QuestionInterfaceProps {
   documentType: "pdf" | "doc" | "txt" | "youtube";
@@ -29,6 +32,12 @@ export const QuestionInterface = ({ documentType, documentContent }: QuestionInt
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Scroll to bottom when messages change
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +46,9 @@ export const QuestionInterface = ({ documentType, documentContent }: QuestionInt
     
     // Check if document content is available
     if (!documentContent) {
-      toast.error("No document content available to analyze");
+      toast.error("Please upload a document before asking questions", {
+        description: "Your document needs to be processed first."
+      });
       return;
     }
     
@@ -66,6 +77,10 @@ export const QuestionInterface = ({ documentType, documentContent }: QuestionInt
     } catch (error) {
       console.error("Error getting response:", error);
       
+      toast.error("Error processing your question", {
+        description: "Please try again or upload a different document."
+      });
+      
       const errorMessage: Message = {
         role: "system",
         content: "Sorry, there was an error processing your question. Please try again.",
@@ -78,19 +93,48 @@ export const QuestionInterface = ({ documentType, documentContent }: QuestionInt
     }
   };
 
+  const isSubmitDisabled = !question.trim() || isLoading || !documentContent;
+
   return (
-    <div className="flex flex-col h-[500px] border rounded-lg">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <Card className="flex flex-col h-[500px] shadow-md border rounded-lg overflow-hidden">
+      <div className="bg-card px-4 py-3 flex justify-between items-center border-b">
+        <h3 className="font-medium">Document Q&A Assistant</h3>
+        
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <HelpCircle className="h-4 w-4" />
+              <span className="sr-only">Help</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>How to use the document assistant</DialogTitle>
+              <DialogDescription>
+                <div className="mt-4 space-y-3">
+                  <p>1. Make sure you've uploaded a document or selected one from the sidebar.</p>
+                  <p>2. Type your question about the document content in the text box.</p>
+                  <p>3. Click the send button or press Enter to submit your question.</p>
+                  <p>4. The assistant will analyze the document and provide an answer based on the content.</p>
+                  <p className="text-sm text-muted-foreground mt-4">This uses local text processing to find relevant information in your document.</p>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-secondary/30">
         {messages.map((message, index) => (
           <div 
             key={index} 
             className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div 
-              className={`max-w-[80%] rounded-lg p-3 ${
+              className={`max-w-[80%] rounded-lg p-3 shadow-sm ${
                 message.role === "user" 
                   ? "bg-primary text-primary-foreground" 
-                  : "bg-muted"
+                  : "bg-background border"
               }`}
             >
               <p className="whitespace-pre-wrap">{message.content}</p>
@@ -103,33 +147,55 @@ export const QuestionInterface = ({ documentType, documentContent }: QuestionInt
         
         {isLoading && (
           <div className="flex justify-start">
-            <div className="max-w-[80%] rounded-lg p-4 bg-muted flex items-center gap-2">
+            <div className="max-w-[80%] rounded-lg p-3 bg-background border flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <p>Analyzing content...</p>
+              <p>Analyzing document...</p>
             </div>
           </div>
         )}
+        
+        <div ref={messagesEndRef} />
       </div>
       
       <Separator />
       
-      <form onSubmit={handleSubmit} className="p-4">
-        <div className="flex gap-2">
+      <form onSubmit={handleSubmit} className="p-4 bg-card">
+        <div className="flex gap-2 items-center">
           <Textarea 
-            placeholder={`Ask a question about this ${documentType.toUpperCase()} document...`}
+            placeholder={documentContent 
+              ? `Ask a question about this ${documentType === "youtube" ? "video" : documentType.toUpperCase() + " document"}...`
+              : "Upload a document to start asking questions"
+            }
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            className="min-h-[60px]"
+            className="min-h-[60px] resize-none"
+            disabled={!documentContent}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && !isSubmitDisabled) {
+                e.preventDefault();
+                handleSubmit(e);
+              }
+            }}
           />
-          <Button 
-            type="submit" 
-            size="icon" 
-            disabled={!question.trim() || isLoading || !documentContent}
-          >
-            <Send className="h-4 w-4" />
-          </Button>
+          <div className="flex flex-col">
+            <Button 
+              type="submit" 
+              size="icon" 
+              disabled={isSubmitDisabled}
+              className="h-[60px] w-[60px]"
+              title={isSubmitDisabled 
+                ? (documentContent ? "Please type a question" : "Upload a document first") 
+                : "Send question"
+              }
+            >
+              <Send className="h-5 w-5" />
+            </Button>
+            {!documentContent && (
+              <p className="text-xs text-muted-foreground mt-1 text-center">Upload<br/>first</p>
+            )}
+          </div>
         </div>
       </form>
-    </div>
+    </Card>
   );
 };
