@@ -14,7 +14,7 @@ export const getApiKey = () => openaiApiKey;
 export const askQuestionAboutDocument = async (
   documentContent: string,
   question: string
-): Promise<string> {
+) => {
   if (!openaiApiKey) {
     return "Please provide an OpenAI API key to use this feature.";
   }
