@@ -1,9 +1,8 @@
 
-import OpenAI from 'openai';
+// Local processing service for document Q&A
+// No external API key required
 
-// In a production app, you'd store this in an environment variable or backend
-// For this demo, we'll let users provide their own API key
-let openaiApiKey = '';
+let openaiApiKey = ''; // Keeping this for backward compatibility
 
 export const setApiKey = (key: string) => {
   openaiApiKey = key;
@@ -11,41 +10,68 @@ export const setApiKey = (key: string) => {
 
 export const getApiKey = () => openaiApiKey;
 
+/**
+ * Simple document question answering using local text processing
+ */
 export const askQuestionAboutDocument = async (
   documentContent: string,
   question: string
 ) => {
-  if (!openaiApiKey) {
-    return "Please provide an OpenAI API key to use this feature.";
-  }
-
+  // No API key check needed for local processing
   try {
-    const openai = new OpenAI({
-      apiKey: openaiApiKey,
-      dangerouslyAllowBrowser: true // Note: In production, API calls should be made from a backend
-    });
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // Using a smaller model for cost efficiency
-      messages: [
-        {
-          role: "system",
-          content: "You are a helpful assistant that answers questions based on the provided document content. Only use information from the document to answer questions. If the answer is not in the document, say so."
-        },
-        {
-          role: "user",
-          content: `Document content: ${documentContent.slice(0, 15000)}... 
-          
-          Please answer this question about the document: ${question}`
+    // Convert question and content to lowercase for case-insensitive matching
+    const lowercaseQuestion = question.toLowerCase();
+    const lowercaseContent = documentContent.toLowerCase();
+    
+    // Get relevant keywords from the question (basic NLP)
+    const questionWords = lowercaseQuestion
+      .replace(/[.,?!;:(){}[\]"']/g, '')
+      .split(/\s+/)
+      .filter(word => 
+        !['what', 'who', 'where', 'when', 'why', 'how', 'is', 'are', 'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for'].includes(word)
+      );
+    
+    // Find paragraphs that contain question keywords
+    const paragraphs = documentContent.split(/\n\s*\n/); // Split by paragraph breaks
+    
+    // Score paragraphs based on keyword matches
+    const scoredParagraphs = paragraphs.map(paragraph => {
+      const lowercaseParagraph = paragraph.toLowerCase();
+      let score = 0;
+      
+      // Count keyword matches
+      questionWords.forEach(keyword => {
+        const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+        const matches = lowercaseParagraph.match(regex);
+        if (matches) {
+          score += matches.length;
         }
-      ],
-      temperature: 0.3,
-      max_tokens: 500
+      });
+      
+      return { paragraph, score };
     });
+    
+    // Sort paragraphs by relevance score (highest to lowest)
+    scoredParagraphs.sort((a, b) => b.score - a.score);
+    
+    // Take the top 3 most relevant paragraphs
+    const relevantParagraphs = scoredParagraphs
+      .filter(item => item.score > 0)
+      .slice(0, 3)
+      .map(item => item.paragraph);
+    
+    if (relevantParagraphs.length === 0) {
+      return "I couldn't find information related to your question in the document. Please try rephrasing your question or checking if the document contains this information.";
+    }
+    
+    // Format the answer
+    const answer = `Based on the document content, here's what I found:
 
-    return response.choices[0].message.content || "Sorry, I couldn't generate a response.";
+${relevantParagraphs.map((p, i) => `Relevant excerpt ${i+1}: ${p.trim()}`).join('\n\n')}`;
+    
+    return answer;
   } catch (error) {
-    console.error("Error querying OpenAI:", error);
+    console.error("Error processing document question:", error);
     return "An error occurred when processing your question. Please try again.";
   }
-}
+};

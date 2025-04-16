@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Send, Loader2 } from "lucide-react";
-import { askQuestionAboutDocument, getApiKey } from "@/services/aiService";
+import { askQuestionAboutDocument } from "@/services/aiService";
 import { toast } from "sonner";
 
 interface QuestionInterfaceProps {
@@ -25,7 +24,7 @@ export const QuestionInterface = ({ documentType, documentContent }: QuestionInt
       role: "system",
       content: documentContent 
         ? `I've analyzed your ${documentType === "youtube" ? "YouTube video" : documentType.toUpperCase() + " document"}. Ask any questions about it, and I'll help answer them based on the content.`
-        : `Upload a document or provide an OpenAI API key to start asking questions.`,
+        : `Upload a document to start asking questions.`,
       timestamp: new Date(),
     },
   ]);
@@ -36,12 +35,6 @@ export const QuestionInterface = ({ documentType, documentContent }: QuestionInt
     
     if (!question.trim() || isLoading) return;
     
-    // Check if API key is set
-    if (!getApiKey()) {
-      toast.error("Please set your OpenAI API key in the settings first");
-      return;
-    }
-
     // Check if document content is available
     if (!documentContent) {
       toast.error("No document content available to analyze");
@@ -60,18 +53,18 @@ export const QuestionInterface = ({ documentType, documentContent }: QuestionInt
     setIsLoading(true);
     
     try {
-      // Get response from AI service
-      const aiResponse = await askQuestionAboutDocument(documentContent, question);
+      // Get response using local processing
+      const response = await askQuestionAboutDocument(documentContent, question);
       
       const newSystemMessage: Message = {
         role: "system",
-        content: aiResponse,
+        content: response,
         timestamp: new Date(),
       };
       
       setMessages(prev => [...prev, newSystemMessage]);
     } catch (error) {
-      console.error("Error getting AI response:", error);
+      console.error("Error getting response:", error);
       
       const errorMessage: Message = {
         role: "system",
@@ -131,7 +124,7 @@ export const QuestionInterface = ({ documentType, documentContent }: QuestionInt
           <Button 
             type="submit" 
             size="icon" 
-            disabled={!question.trim() || isLoading || !documentContent || !getApiKey()}
+            disabled={!question.trim() || isLoading || !documentContent}
           >
             <Send className="h-4 w-4" />
           </Button>
