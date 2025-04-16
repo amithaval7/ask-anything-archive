@@ -1,94 +1,85 @@
 
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Youtube, CheckCircle2 } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { toast } from "sonner";
 
-export const YouTubeInput = () => {
+interface YouTubeInputProps {
+  onVideoSubmitted?: (videoId: string) => void;
+}
+
+export const YouTubeInput = ({ onVideoSubmitted }: YouTubeInputProps) => {
   const [url, setUrl] = useState("");
-  const [isValid, setIsValid] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const validateYoutubeUrl = (input: string) => {
-    // Simple YouTube URL validation
-    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
-    return youtubeRegex.test(input);
+  // Function to extract video ID from YouTube URL
+  const extractVideoId = (url: string): string | null => {
+    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[7].length === 11) ? match[7] : null;
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target.value;
-    setUrl(input);
-    setIsValid(validateYoutubeUrl(input));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isValid) {
-      setIsSubmitted(true);
-      // In a real app, you'd process the URL here
-    }
-  };
-
-  const getThumbnail = () => {
-    // Extract video ID - simplistic version
-    let videoId = "";
+  const handleSubmit = () => {
+    if (!url.trim()) return;
     
-    if (url.includes("youtu.be/")) {
-      videoId = url.split("youtu.be/")[1].split("?")[0];
-    } else if (url.includes("youtube.com/watch?v=")) {
-      videoId = url.split("v=")[1].split("&")[0];
-    }
+    setIsSubmitting(true);
     
-    return videoId ? `https://img.youtube.com/vi/${videoId}/0.jpg` : null;
+    try {
+      const videoId = extractVideoId(url);
+      
+      if (!videoId) {
+        toast.error("Invalid YouTube URL. Please enter a valid YouTube video link.");
+        return;
+      }
+      
+      if (onVideoSubmitted) {
+        onVideoSubmitted(videoId);
+        toast.success("YouTube video added successfully!");
+      }
+      
+      setUrl("");
+    } catch (error) {
+      console.error("Error processing YouTube URL:", error);
+      toast.error("Failed to process YouTube URL. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Card className="p-6">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Youtube className="h-5 w-5 text-red-500" />
-          <h3 className="font-medium">Add YouTube Link</h3>
-        </div>
-        
-        <div className="flex gap-3">
-          <div className="flex-1">
+      <h3 className="text-lg font-medium mb-4">Add YouTube Video Link</h3>
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="youtube-url" className="block text-sm font-medium mb-1">
+            YouTube Video URL
+          </label>
+          <div className="flex gap-2">
             <Input
-              type="text"
-              placeholder="Paste YouTube URL here"
+              id="youtube-url"
+              placeholder="https://www.youtube.com/watch?v=..."
               value={url}
-              onChange={handleChange}
-              className={isValid ? "border-green-500" : ""}
+              onChange={(e) => setUrl(e.target.value)}
             />
+            <Button 
+              onClick={handleSubmit} 
+              disabled={isSubmitting || !url.trim()}
+            >
+              {isSubmitting ? "Adding..." : "Add"}
+            </Button>
           </div>
-          <Button type="submit" disabled={!isValid || isSubmitted}>
-            {isSubmitted ? "Added" : "Add Link"}
-          </Button>
         </div>
         
-        {isValid && getThumbnail() && (
-          <div className="mt-4">
-            <p className="text-sm text-muted-foreground mb-2">Video preview:</p>
-            <div className="relative rounded-md overflow-hidden aspect-video">
-              <img 
-                src={getThumbnail()!} 
-                alt="YouTube video thumbnail" 
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                <Youtube className="h-12 w-12 text-red-500" />
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {isSubmitted && (
-          <div className="flex items-center gap-2 text-green-600">
-            <CheckCircle2 className="h-5 w-5" />
-            <span>YouTube video added successfully!</span>
-          </div>
-        )}
-      </form>
+        <div className="text-sm text-muted-foreground">
+          <p>Supported formats:</p>
+          <ul className="list-disc pl-5 mt-1">
+            <li>https://www.youtube.com/watch?v=VIDEOID</li>
+            <li>https://youtu.be/VIDEOID</li>
+            <li>https://youtube.com/embed/VIDEOID</li>
+          </ul>
+        </div>
+      </div>
     </Card>
   );
 };

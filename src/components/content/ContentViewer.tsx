@@ -3,15 +3,46 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, ArrowLeft, Youtube } from "lucide-react";
 import { QuestionInterface } from "./QuestionInterface";
+import { ApiKeyInput } from "@/components/settings/ApiKeyInput";
+import { useEffect, useState } from "react";
+import { extractTextFromFile, extractTextFromYouTube } from "@/utils/documentProcessing";
+import { toast } from "sonner";
 
 interface ContentViewerProps {
   type: "pdf" | "doc" | "txt" | "youtube";
   title: string;
   file?: File;
+  videoId?: string;
   onBack?: () => void;
 }
 
-export const ContentViewer = ({ type, title, file, onBack }: ContentViewerProps) => {
+export const ContentViewer = ({ type, title, file, videoId, onBack }: ContentViewerProps) => {
+  const [extractedText, setExtractedText] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const processContent = async () => {
+      setIsLoading(true);
+      try {
+        if (file) {
+          const text = await extractTextFromFile(file);
+          setExtractedText(text);
+        } else if (videoId) {
+          const text = await extractTextFromYouTube(videoId);
+          setExtractedText(text);
+        }
+      } catch (error) {
+        console.error("Error processing content:", error);
+        toast.error("Failed to process the content. Please try again.");
+        setExtractedText(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    processContent();
+  }, [file, videoId, type]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -32,23 +63,33 @@ export const ContentViewer = ({ type, title, file, onBack }: ContentViewerProps)
           )}
           <h1 className="text-xl font-medium truncate">{title}</h1>
         </div>
+        <ApiKeyInput />
       </div>
 
       <Card className="p-6">
         <div className="mb-6">
           <h2 className="text-lg font-medium mb-2">Document Preview</h2>
-          <div className="bg-muted rounded-lg p-4 text-center text-muted-foreground">
-            {type === "youtube" ? (
-              <p>YouTube content would be displayed here</p>
+          <div className="bg-muted rounded-lg p-4 max-h-40 overflow-y-auto text-sm">
+            {isLoading ? (
+              <div className="flex justify-center items-center py-4">
+                <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
+                <span className="ml-2">Processing document...</span>
+              </div>
+            ) : extractedText ? (
+              <p className="whitespace-pre-line">{extractedText.slice(0, 500)}...</p>
             ) : (
-              <p>{type.toUpperCase()} document preview would be shown here</p>
+              <p className="text-center text-muted-foreground">
+                {type === "youtube" ? 
+                  "YouTube content would be displayed here" :
+                  `${type.toUpperCase()} document preview would be shown here`}
+              </p>
             )}
           </div>
         </div>
         
         <div>
           <h2 className="text-lg font-medium mb-2">Ask Questions</h2>
-          <QuestionInterface documentType={type} />
+          <QuestionInterface documentType={type} documentContent={extractedText} />
         </div>
       </Card>
     </div>

@@ -4,9 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Send, Loader2 } from "lucide-react";
+import { askQuestionAboutDocument, getApiKey } from "@/services/aiService";
+import { toast } from "sonner";
 
 interface QuestionInterfaceProps {
   documentType: "pdf" | "doc" | "txt" | "youtube";
+  documentContent: string | null;
 }
 
 interface Message {
@@ -15,12 +18,14 @@ interface Message {
   timestamp: Date;
 }
 
-export const QuestionInterface = ({ documentType }: QuestionInterfaceProps) => {
+export const QuestionInterface = ({ documentType, documentContent }: QuestionInterfaceProps) => {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "system",
-      content: `I've analyzed your ${documentType === "youtube" ? "YouTube video" : documentType.toUpperCase() + " document"}. Ask any questions about it, and I'll help answer them based on the content.`,
+      content: documentContent 
+        ? `I've analyzed your ${documentType === "youtube" ? "YouTube video" : documentType.toUpperCase() + " document"}. Ask any questions about it, and I'll help answer them based on the content.`
+        : `Upload a document or provide an OpenAI API key to start asking questions.`,
       timestamp: new Date(),
     },
   ]);
@@ -30,6 +35,18 @@ export const QuestionInterface = ({ documentType }: QuestionInterfaceProps) => {
     e.preventDefault();
     
     if (!question.trim() || isLoading) return;
+    
+    // Check if API key is set
+    if (!getApiKey()) {
+      toast.error("Please set your OpenAI API key in the settings first");
+      return;
+    }
+
+    // Check if document content is available
+    if (!documentContent) {
+      toast.error("No document content available to analyze");
+      return;
+    }
     
     // Add user question
     const newUserMessage: Message = {
@@ -42,33 +59,30 @@ export const QuestionInterface = ({ documentType }: QuestionInterfaceProps) => {
     setQuestion("");
     setIsLoading(true);
     
-    // Simulate API response
-    setTimeout(() => {
-      let responseContent = "";
-      
-      switch (documentType) {
-        case "pdf":
-          responseContent = "Based on the PDF content, the answer to your question is... [Sample response that would be generated based on actual PDF content in a real application]";
-          break;
-        case "youtube":
-          responseContent = "After analyzing the YouTube video, I found that... [Sample response that would be generated based on actual video content in a real application]";
-          break;
-        case "doc":
-          responseContent = "According to the Word document, the information shows that... [Sample response based on document content]";
-          break;
-        default:
-          responseContent = "The text file indicates that... [Sample response based on text file content]";
-      }
+    try {
+      // Get response from AI service
+      const aiResponse = await askQuestionAboutDocument(documentContent, question);
       
       const newSystemMessage: Message = {
         role: "system",
-        content: responseContent,
+        content: aiResponse,
         timestamp: new Date(),
       };
       
       setMessages(prev => [...prev, newSystemMessage]);
+    } catch (error) {
+      console.error("Error getting AI response:", error);
+      
+      const errorMessage: Message = {
+        role: "system",
+        content: "Sorry, there was an error processing your question. Please try again.",
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -114,7 +128,11 @@ export const QuestionInterface = ({ documentType }: QuestionInterfaceProps) => {
             onChange={(e) => setQuestion(e.target.value)}
             className="min-h-[60px]"
           />
-          <Button type="submit" size="icon" disabled={!question.trim() || isLoading}>
+          <Button 
+            type="submit" 
+            size="icon" 
+            disabled={!question.trim() || isLoading || !documentContent || !getApiKey()}
+          >
             <Send className="h-4 w-4" />
           </Button>
         </div>
