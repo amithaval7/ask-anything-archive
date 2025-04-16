@@ -1,6 +1,10 @@
 
-import * as pdfParse from 'pdf-parse';
 import * as mammoth from 'mammoth';
+import * as pdfjs from 'pdfjs-dist';
+
+// Initialize the PDF.js worker
+// We need to set the worker source to use PDF.js in the browser
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 export async function extractTextFromFile(file: File): Promise<string> {
   if (file.type.includes('pdf')) {
@@ -15,9 +19,23 @@ export async function extractTextFromFile(file: File): Promise<string> {
 
 async function extractTextFromPdf(file: File): Promise<string> {
   try {
-    const buffer = await file.arrayBuffer();
-    const pdfData = await pdfParse(buffer);
-    return pdfData.text;
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+    
+    let fullText = '';
+    
+    // Extract text from each page
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(' ');
+      
+      fullText += pageText + '\n';
+    }
+    
+    return fullText;
   } catch (error) {
     console.error("Error extracting text from PDF:", error);
     throw new Error("Failed to extract text from PDF");
