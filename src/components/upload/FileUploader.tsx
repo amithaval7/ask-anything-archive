@@ -5,8 +5,13 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload, File, FileText, FileImage } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
 
-export const FileUploader = () => {
+interface FileUploaderProps {
+  onFileUploaded?: (file: File) => void;
+}
+
+export const FileUploader = ({ onFileUploaded }: FileUploaderProps) => {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -22,7 +27,8 @@ export const FileUploader = () => {
       'application/msword': ['.doc'],
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
       'text/plain': ['.txt'],
-    }
+    },
+    maxFiles: 1
   });
 
   const handleUpload = () => {
@@ -39,7 +45,12 @@ export const FileUploader = () => {
       if (currentProgress >= 100) {
         clearInterval(interval);
         setUploading(false);
-        // In a real app, you'd navigate to the content view or show success
+        
+        // Call the callback with the uploaded file
+        if (onFileUploaded && files[0]) {
+          onFileUploaded(files[0]);
+          toast.success(`File "${files[0].name}" uploaded successfully!`);
+        }
       }
     }, 300);
   };
@@ -58,7 +69,7 @@ export const FileUploader = () => {
         <div className="flex flex-col items-center justify-center space-y-4">
           <Upload className={`h-12 w-12 ${isDragActive ? 'text-primary' : 'text-muted-foreground'}`} />
           <div>
-            <p className="font-medium text-lg">Drop your files here, or click to select</p>
+            <p className="font-medium text-lg">Drop your file here, or click to select</p>
             <p className="text-sm text-muted-foreground">
               Supports PDF, Word documents (.doc, .docx), and text files
             </p>
@@ -68,7 +79,7 @@ export const FileUploader = () => {
 
       {files.length > 0 && (
         <div className="space-y-4">
-          <h3 className="font-medium">Selected Files</h3>
+          <h3 className="font-medium">Selected File</h3>
           <Card className="p-4">
             <div className="space-y-3">
               {files.map((file, index) => (
@@ -91,7 +102,7 @@ export const FileUploader = () => {
                 className="gap-2"
               >
                 <Upload className="h-4 w-4" /> 
-                {uploading ? 'Uploading...' : 'Upload Files'}
+                {uploading ? 'Uploading...' : 'Upload File'}
               </Button>
             </div>
           </Card>
