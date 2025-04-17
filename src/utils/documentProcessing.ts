@@ -2,9 +2,9 @@
 import * as mammoth from 'mammoth';
 import * as pdfjs from 'pdfjs-dist';
 
-// Initialize the PDF.js worker
-// We need to set the worker source to use PDF.js in the browser
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Initialize the PDF.js worker - fixing the worker path issue
+const pdfWorkerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
 
 export async function extractTextFromFile(file: File): Promise<string> {
   if (file.type.includes('pdf')) {

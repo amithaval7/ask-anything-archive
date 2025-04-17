@@ -18,29 +18,52 @@ interface ContentViewerProps {
 export const ContentViewer = ({ type, title, file, videoId }: ContentViewerProps) => {
   const [extractedText, setExtractedText] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [processingError, setProcessingError] = useState<string | null>(null);
 
   useEffect(() => {
     const processContent = async () => {
       setIsLoading(true);
+      setProcessingError(null);
+      
       try {
         if (file) {
+          console.log("Processing file:", file.name, file.type);
           const text = await extractTextFromFile(file);
+          console.log("Extracted text length:", text.length);
           setExtractedText(text);
           
           // Store this in localStorage for future reference
           localStorage.setItem('uploadedFileName', file.name);
           localStorage.setItem('uploadedFileType', file.type);
+          
+          if (!text || text.length === 0) {
+            throw new Error("No text could be extracted from the document");
+          }
         } else if (videoId) {
+          console.log("Processing YouTube video:", videoId);
           const text = await extractTextFromYouTube(videoId);
+          console.log("Extracted text length:", text.length);
           setExtractedText(text);
           
           // Store YouTube ID in localStorage
           localStorage.setItem('youtubeVideoId', videoId);
+        } else {
+          throw new Error("No content provided");
         }
       } catch (error) {
         console.error("Error processing content:", error);
-        toast.error("Failed to process the content. Please try again.");
-        setExtractedText(null);
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        setProcessingError(errorMessage);
+        toast.error("Failed to process the content", {
+          description: `Error: ${errorMessage}`
+        });
+        
+        // Set fallback text so the Q&A interface still works
+        if (file) {
+          setExtractedText(`This is fallback content for ${file.name}. The actual content could not be processed due to an error.`);
+        } else if (videoId) {
+          setExtractedText(`This is fallback content for YouTube video ${videoId}. The actual content could not be processed due to an error.`);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -75,6 +98,11 @@ export const ContentViewer = ({ type, title, file, videoId }: ContentViewerProps
               <div className="flex justify-center items-center py-4">
                 <Loader2 className="h-6 w-6 animate-spin mr-2" />
                 <span>Processing document...</span>
+              </div>
+            ) : processingError ? (
+              <div className="text-center text-red-500">
+                <p>Error processing document: {processingError}</p>
+                <p className="text-sm text-muted-foreground mt-2">Using fallback text for Q&A</p>
               </div>
             ) : extractedText ? (
               <p className="whitespace-pre-line">{extractedText.slice(0, 500)}...</p>

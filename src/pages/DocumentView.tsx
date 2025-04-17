@@ -14,34 +14,58 @@ const DocumentView = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // This is just an example, in a real app you would fetch the file from a server
-    // For this demo, we'll check localStorage
-    const storedFileName = localStorage.getItem('uploadedFileName');
-    const storedFileType = localStorage.getItem('uploadedFileType');
-    
-    if (fileName === 'sample') {
-      // Create a sample file
-      const sampleFile = new File(
-        ["This is a sample document for testing purposes. It contains text that you can ask questions about."], 
-        "Sample Document.pdf", 
-        { type: "application/pdf" }
-      );
-      setFile(sampleFile);
-    } else if (storedFileName && storedFileType && decodeURIComponent(fileName || '') === storedFileName) {
-      // Create a replacement file since we can't store actual files in localStorage
-      const placeholderContent = `This is a placeholder for ${storedFileName}. In a real application, 
-      the actual file content would be loaded from a server or database.`;
+    const loadDocument = async () => {
+      // This is just an example, in a real app you would fetch the file from a server
+      // For this demo, we'll check localStorage
+      const storedFileName = localStorage.getItem('uploadedFileName');
+      const storedFileType = localStorage.getItem('uploadedFileType');
       
-      const placeholderFile = new File([placeholderContent], storedFileName, { type: storedFileType });
-      setFile(placeholderFile);
-    } else {
-      toast.error("Document not found", {
-        description: "The document you're looking for doesn't exist or has been removed."
-      });
-      navigate('/');
-    }
+      if (fileName === 'sample') {
+        // Create a sample file with more substantial content
+        const sampleContent = `
+        Document Assistant Sample Document
+        
+        This is a sample document that demonstrates the capabilities of the Document Assistant application.
+        
+        You can use this document to test the question and answer functionality.
+        
+        Some key features of Document Assistant:
+        - Upload and analyze PDF documents
+        - Upload and analyze Word documents
+        - Upload and analyze plain text files
+        - Add YouTube videos and analyze their content
+        - Ask questions about your documents
+        - Save your questions and answers for future reference
+        
+        Try asking questions about this document to see how the Document Assistant works!
+        `;
+        
+        const sampleFile = new File(
+          [sampleContent], 
+          "Sample Document.pdf", 
+          { type: "application/pdf" }
+        );
+        setFile(sampleFile);
+      } else if (storedFileName && storedFileType && decodeURIComponent(fileName || '') === storedFileName) {
+        // Create a placeholder file since we can't store actual files in localStorage
+        const placeholderContent = `This is content for ${storedFileName}. In a real application, 
+        the actual file content would be loaded from a server or database. This is placeholder text
+        that you can ask questions about. The Document Assistant will analyze this text and provide
+        answers based on its content.`;
+        
+        const placeholderFile = new File([placeholderContent], storedFileName, { type: storedFileType });
+        setFile(placeholderFile);
+      } else {
+        toast.error("Document not found", {
+          description: "The document you're looking for doesn't exist or has been removed."
+        });
+        navigate('/');
+      }
+      
+      setLoading(false);
+    };
     
-    setLoading(false);
+    loadDocument();
   }, [fileName, navigate]);
 
   if (loading) {

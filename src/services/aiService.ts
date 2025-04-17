@@ -17,6 +17,9 @@ export const askQuestionAboutDocument = async (
   documentContent: string,
   question: string
 ): Promise<string> => {
+  // Add a small delay to simulate processing
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
   try {
     // Validate inputs
     if (!documentContent || !question) {
@@ -71,7 +74,13 @@ export const askQuestionAboutDocument = async (
       .map(item => item.paragraph);
     
     if (relevantParagraphs.length === 0) {
-      return "I couldn't find information related to your question in the document. Please try rephrasing your question or checking if the document contains this information.";
+      // If no direct matches, use a fallback response with document summary
+      return `Based on the document content, I don't find a direct answer to your question. 
+      Here's a brief summary of what the document contains:
+      
+      ${documentContent.slice(0, 200)}... (content truncated)
+      
+      Try asking a question more directly related to the document content.`;
     }
     
     // Format the answer
