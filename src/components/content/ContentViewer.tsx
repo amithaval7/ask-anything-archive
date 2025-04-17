@@ -1,12 +1,13 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Youtube, Loader2, RefreshCcw } from "lucide-react";
+import { FileText, Youtube, Loader2, RefreshCcw, AlertCircle } from "lucide-react";
 import { QuestionInterface } from "./QuestionInterface";
 import { ApiKeyInput } from "@/components/settings/ApiKeyInput";
 import { useEffect, useState } from "react";
 import { extractTextFromFile, extractTextFromYouTube } from "@/utils/documentProcessing";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ContentViewerProps {
   type: "pdf" | "doc" | "txt" | "youtube";
@@ -29,17 +30,23 @@ export const ContentViewer = ({ type, title, file, videoId }: ContentViewerProps
       try {
         if (file) {
           console.log("Processing file:", file.name, file.type);
+          
+          // Always provide some minimal content even before processing
+          // This ensures Q&A interface will work regardless of extraction success
+          setExtractedText(`Processing ${file.name}...`);
+          
           const text = await extractTextFromFile(file);
           console.log("Extracted text length:", text.length);
+          
+          if (!text || text.length === 0) {
+            throw new Error("No text could be extracted from the document");
+          }
+          
           setExtractedText(text);
           
           // Store this in localStorage for future reference
           localStorage.setItem('uploadedFileName', file.name);
           localStorage.setItem('uploadedFileType', file.type);
-          
-          if (!text || text.length === 0) {
-            throw new Error("No text could be extracted from the document");
-          }
         } else if (videoId) {
           console.log("Processing YouTube video:", videoId);
           const text = await extractTextFromYouTube(videoId);
@@ -81,22 +88,33 @@ export const ContentViewer = ({ type, title, file, videoId }: ContentViewerProps
           description: `Error: ${errorMessage}. Try refreshing or uploading again.`
         });
         
-        // Set fallback text so the Q&A interface still works
+        // Set fallback text so the Q&A interface ALWAYS works
         if (file) {
-          const fallbackText = `This is fallback content for ${file.name}. The actual content could not be processed due to an error.
+          const fallbackText = `This is fallback content for ${file.name}. The actual content could not be fully processed due to a technical issue.
           
-          The document processing encountered a technical issue. You can still ask questions about this fallback content.
+          The document assistant will work with the limited information available. You can still ask questions about this document.
           
-          Common reasons for document processing failures:
+          Document details:
+          - Name: ${file.name}
+          - Type: ${file.type}
+          - Size: ${(file.size / 1024).toFixed(2)} KB
+          
+          Common reasons for processing limitations:
           - PDF files with security restrictions
           - Image-based PDFs without embedded text
           - Corrupted file format
           - Very large documents
           
-          Try uploading a different format or a simplified version of the document.`;
+          You can try uploading a different format or a simplified version of the document.`;
           setExtractedText(fallbackText);
         } else if (videoId) {
-          setExtractedText(`This is fallback content for YouTube video ${videoId}. The actual content could not be processed due to an error.`);
+          setExtractedText(`This is fallback content for YouTube video ${videoId}. The video content could not be fully processed.
+          
+          You can still ask questions about this video based on the available information:
+          - Video ID: ${videoId}
+          - Platform: YouTube
+          
+          Try asking general questions about the video topic.`);
         }
       } finally {
         setIsLoading(false);
@@ -108,6 +126,7 @@ export const ContentViewer = ({ type, title, file, videoId }: ContentViewerProps
 
   const handleRetry = () => {
     setRetryCount(prev => prev + 1);
+    toast.info("Retrying document processing...");
   };
 
   return (
@@ -128,13 +147,22 @@ export const ContentViewer = ({ type, title, file, videoId }: ContentViewerProps
         <ApiKeyInput />
       </div>
 
+      {processingError && type === "pdf" && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            PDF processing encountered an issue. Using fallback text for Q&A functionality.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <div className="grid gap-6">
         <Card className="p-6">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-medium">Document Preview</h2>
             {processingError && (
               <Button variant="outline" size="sm" onClick={handleRetry} className="flex items-center gap-1">
-                <RefreshCcw className="h-4 w-4" /> Retry
+                <RefreshCcw className="h-4 w-4" /> Retry Processing
               </Button>
             )}
           </div>
@@ -145,9 +173,12 @@ export const ContentViewer = ({ type, title, file, videoId }: ContentViewerProps
                 <span>Processing document...</span>
               </div>
             ) : processingError ? (
-              <div className="text-center">
+              <div className="text-center space-y-2">
                 <p className="text-red-500">Error processing document: {processingError}</p>
-                <p className="text-sm text-muted-foreground mt-2">Using fallback text for Q&A</p>
+                {extractedText && <p className="text-sm text-muted-foreground">Using fallback text for Q&A</p>}
+                <div className="text-left mt-4 border-t pt-2">
+                  <p className="whitespace-pre-line">{extractedText ? extractedText.slice(0, 500) + '...' : ''}</p>
+                </div>
               </div>
             ) : extractedText ? (
               <p className="whitespace-pre-line">{extractedText.slice(0, 500)}...</p>

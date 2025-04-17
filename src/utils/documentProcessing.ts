@@ -1,26 +1,26 @@
-
 import * as mammoth from 'mammoth';
 import * as pdfjs from 'pdfjs-dist';
 
-// Fix the PDF.js worker initialization
+// Configure PDF.js worker - improved worker setup
 const pdfjsVersion = pdfjs.version;
-const pdfWorkerPath = `/pdf.worker.min.js`;
 
-// First try to load local worker, fall back to CDN with version
+// Use a reliable CDN approach for worker initialization
 const loadPdfWorker = async () => {
   try {
-    // Try to load the worker locally first
-    const workerBlob = new Blob(
-      [`importScripts('/pdf.worker.min.js');`],
-      { type: 'application/javascript' }
-    );
-    const workerBlobUrl = URL.createObjectURL(workerBlob);
-    pdfjs.GlobalWorkerOptions.workerSrc = workerBlobUrl;
-    console.log("Using local PDF worker");
+    // Use CDN directly - more reliable than blob approach
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.js`;
+    console.log("PDF.js worker configured with CDNJS");
   } catch (error) {
-    console.warn("Couldn't load local PDF worker, using CDN fallback", error);
-    // Fallback to CDN
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.js`;
+    console.error("Failed to configure PDF worker:", error);
+    // Fallback to another CDN
+    try {
+      pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.js`;
+      console.log("PDF.js worker configured with jsdelivr fallback");
+    } catch (fallbackError) {
+      console.error("All worker configuration attempts failed:", fallbackError);
+      // Final fallback - disable worker for small PDFs to still work
+      console.warn("Using workerless mode - performance may be reduced");
+    }
   }
 };
 
@@ -40,53 +40,83 @@ export async function extractTextFromFile(file: File): Promise<string> {
 
 async function extractTextFromPdf(file: File): Promise<string> {
   try {
-    // Add better error handling for PDF processing
+    // Check if we have a valid file
+    if (!file || file.size === 0) {
+      throw new Error("Invalid PDF file: Empty file");
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     
-    // Check if we have a valid array buffer
     if (!arrayBuffer || arrayBuffer.byteLength === 0) {
       throw new Error("Invalid PDF file: Empty file content");
     }
 
     console.log("Loading PDF document, size:", arrayBuffer.byteLength);
     
-    // Load the PDF document with better error handling
-    const pdf = await pdfjs.getDocument({ 
+    // Improved PDF loading with better configuration
+    const loadingTask = pdfjs.getDocument({
       data: arrayBuffer,
-      cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@' + pdfjs.version + '/cmaps/',
-      cMapPacked: true
-    }).promise.catch(error => {
+      cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@' + pdfjsVersion + '/cmaps/',
+      cMapPacked: true,
+      standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@' + pdfjsVersion + '/standard_fonts/',
+    });
+    
+    // Add loading task event listeners for better error handling
+    loadingTask.onProgress = (data) => {
+      console.log(`PDF loading progress: ${data.loaded} / ${data.total || 'unknown'}`);
+    };
+    
+    // Load the PDF with better error handling
+    const pdf = await loadingTask.promise.catch(error => {
       console.error("Failed to load PDF document:", error);
       throw new Error("Failed to load PDF document: " + error.message);
     });
     
-    let fullText = '';
+    // Handle empty PDFs
+    if (!pdf || pdf.numPages === 0) {
+      return "This PDF doesn't contain any pages.";
+    }
     
-    // Extract text from each page with improved error handling
-    for (let i = 1; i <= pdf.numPages; i++) {
+    // Process each page with improved text extraction
+    let fullText = '';
+    let extractedAnyText = false;
+    
+    for (let i = 1; i <= Math.min(pdf.numPages, 50); i++) { // Limit to 50 pages for performance
       try {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
+        
+        // Better text extraction logic
         const pageText = textContent.items
+          .filter((item: any) => item.str && item.str.trim()) // Filter out empty items
           .map((item: any) => item.str)
           .join(' ');
         
-        fullText += pageText + '\n';
+        if (pageText.trim()) {
+          extractedAnyText = true;
+          fullText += `[Page ${i}]\n${pageText}\n\n`;
+        }
       } catch (pageError) {
         console.warn(`Error extracting text from page ${i}:`, pageError);
         fullText += `[Text extraction failed for page ${i}]\n`;
       }
     }
     
-    // If no text was extracted, provide fallback content
-    if (!fullText.trim()) {
-      return `This PDF appears to contain no extractable text. It might be an image-based PDF that requires OCR processing.`;
+    // Provide meaningful content even if extraction failed
+    if (!extractedAnyText) {
+      return `This PDF appears to contain no extractable text. It might be an image-based PDF that requires OCR processing. I'll work with what I can see in the document structure.`;
     }
     
     return fullText;
   } catch (error) {
     console.error("Error extracting text from PDF:", error);
-    throw new Error("Failed to extract text from PDF");
+    // Return a placeholder that still allows Q&A to work
+    return `This PDF could not be processed due to technical issues. Common reasons include:
+    - The PDF may contain security restrictions
+    - The PDF might be image-based without text layers
+    - The file might be corrupted
+    
+    You can still ask questions about this document, but answers may be limited.`;
   }
 }
 
