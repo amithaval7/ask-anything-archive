@@ -1,7 +1,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Youtube, Loader2 } from "lucide-react";
+import { FileText, Youtube, Loader2, RefreshCcw } from "lucide-react";
 import { QuestionInterface } from "./QuestionInterface";
 import { ApiKeyInput } from "@/components/settings/ApiKeyInput";
 import { useEffect, useState } from "react";
@@ -19,6 +19,7 @@ export const ContentViewer = ({ type, title, file, videoId }: ContentViewerProps
   const [extractedText, setExtractedText] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [processingError, setProcessingError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const processContent = async () => {
@@ -48,19 +49,52 @@ export const ContentViewer = ({ type, title, file, videoId }: ContentViewerProps
           // Store YouTube ID in localStorage
           localStorage.setItem('youtubeVideoId', videoId);
         } else {
-          throw new Error("No content provided");
+          // Create sample content for demonstration if no file or video
+          if (title === "Sample Document.pdf" || title.includes("Sample")) {
+            const sampleContent = `
+            Document Assistant Sample Document
+            
+            This is a sample document that demonstrates the capabilities of the Document Assistant application.
+            
+            You can use this document to test the question and answer functionality.
+            
+            Some key features of Document Assistant:
+            - Upload and analyze PDF documents
+            - Upload and analyze Word documents
+            - Upload and analyze plain text files
+            - Add YouTube videos and analyze their content
+            - Ask questions about your documents
+            - Save your questions and answers for future reference
+            
+            Try asking questions about this document to see how the Document Assistant works!
+            `;
+            setExtractedText(sampleContent);
+          } else {
+            throw new Error("No content provided");
+          }
         }
       } catch (error) {
         console.error("Error processing content:", error);
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         setProcessingError(errorMessage);
         toast.error("Failed to process the content", {
-          description: `Error: ${errorMessage}`
+          description: `Error: ${errorMessage}. Try refreshing or uploading again.`
         });
         
         // Set fallback text so the Q&A interface still works
         if (file) {
-          setExtractedText(`This is fallback content for ${file.name}. The actual content could not be processed due to an error.`);
+          const fallbackText = `This is fallback content for ${file.name}. The actual content could not be processed due to an error.
+          
+          The document processing encountered a technical issue. You can still ask questions about this fallback content.
+          
+          Common reasons for document processing failures:
+          - PDF files with security restrictions
+          - Image-based PDFs without embedded text
+          - Corrupted file format
+          - Very large documents
+          
+          Try uploading a different format or a simplified version of the document.`;
+          setExtractedText(fallbackText);
         } else if (videoId) {
           setExtractedText(`This is fallback content for YouTube video ${videoId}. The actual content could not be processed due to an error.`);
         }
@@ -70,7 +104,11 @@ export const ContentViewer = ({ type, title, file, videoId }: ContentViewerProps
     };
 
     processContent();
-  }, [file, videoId, type]);
+  }, [file, videoId, type, retryCount, title]);
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+  };
 
   return (
     <div className="space-y-6">
@@ -92,7 +130,14 @@ export const ContentViewer = ({ type, title, file, videoId }: ContentViewerProps
 
       <div className="grid gap-6">
         <Card className="p-6">
-          <h2 className="text-lg font-medium mb-3">Document Preview</h2>
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-lg font-medium">Document Preview</h2>
+            {processingError && (
+              <Button variant="outline" size="sm" onClick={handleRetry} className="flex items-center gap-1">
+                <RefreshCcw className="h-4 w-4" /> Retry
+              </Button>
+            )}
+          </div>
           <div className="bg-muted rounded-lg p-4 max-h-[200px] overflow-y-auto text-sm">
             {isLoading ? (
               <div className="flex justify-center items-center py-4">
@@ -100,8 +145,8 @@ export const ContentViewer = ({ type, title, file, videoId }: ContentViewerProps
                 <span>Processing document...</span>
               </div>
             ) : processingError ? (
-              <div className="text-center text-red-500">
-                <p>Error processing document: {processingError}</p>
+              <div className="text-center">
+                <p className="text-red-500">Error processing document: {processingError}</p>
                 <p className="text-sm text-muted-foreground mt-2">Using fallback text for Q&A</p>
               </div>
             ) : extractedText ? (
