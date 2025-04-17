@@ -2,9 +2,8 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { FileArchive, FileText, Youtube, Upload, Plus, FileCheck, Home } from "lucide-react";
+import { FileArchive, FileText, Youtube, FileType, Home, File, Upload } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Card } from "@/components/ui/card";
 
 export const Sidebar = () => {
   const navigate = useNavigate();
@@ -21,88 +20,74 @@ export const Sidebar = () => {
       
       <Separator />
       
-      <div className="p-4">
+      <div className="p-4 space-y-2">
         <Button 
-          variant="secondary" 
-          className="w-full justify-start gap-2 mb-2"
+          variant={location.pathname === "/" ? "secondary" : "ghost"} 
+          className="w-full justify-start gap-2"
           onClick={() => navigate("/")}
         >
           <Home className="h-4 w-4" />
           <span>Home</span>
         </Button>
         
+        <Separator className="my-2" />
+        
+        <h3 className="text-sm font-medium text-muted-foreground px-2 py-1">Upload Documents</h3>
+        
         <Button 
-          variant="default" 
-          className="w-full justify-start gap-2 bg-primary hover:bg-primary/90"
-          onClick={() => navigate("/upload")}
+          variant={location.pathname === "/upload/pdf" ? "secondary" : "ghost"}
+          className="w-full justify-start gap-2"
+          onClick={() => navigate("/upload/pdf")}
         >
-          <Plus className="h-4 w-4" />
-          <span>Add New Document</span>
+          <FileText className="h-4 w-4 text-red-500" />
+          <span>Upload a PDF</span>
+        </Button>
+        
+        <Button 
+          variant={location.pathname === "/upload/word" ? "secondary" : "ghost"}
+          className="w-full justify-start gap-2"
+          onClick={() => navigate("/upload/word")}
+        >
+          <File className="h-4 w-4 text-blue-500" />
+          <span>Upload a Word Doc</span>
+        </Button>
+        
+        <Button 
+          variant={location.pathname === "/upload/text" ? "secondary" : "ghost"}
+          className="w-full justify-start gap-2"
+          onClick={() => navigate("/upload/text")}
+        >
+          <FileType className="h-4 w-4 text-gray-500" />
+          <span>Upload a Text File</span>
+        </Button>
+        
+        <Button 
+          variant={location.pathname === "/upload/youtube" ? "secondary" : "ghost"}
+          className="w-full justify-start gap-2"
+          onClick={() => navigate("/upload/youtube")}
+        >
+          <Youtube className="h-4 w-4 text-red-500" />
+          <span>Add a YouTube Video</span>
+        </Button>
+        
+        <Separator className="my-2" />
+        
+        <h3 className="text-sm font-medium text-muted-foreground px-2 py-1">My Documents</h3>
+        
+        <Button 
+          variant="ghost"
+          className="w-full justify-start gap-2"
+          onClick={() => navigate("/documents")}
+        >
+          <Upload className="h-4 w-4" />
+          <span>View All Documents</span>
         </Button>
       </div>
       
-      <Separator />
-      
-      <ScrollArea className="h-[calc(100vh-200px)]">
-        <div className="p-4">
-          <h3 className="text-sm font-medium text-muted-foreground mb-3">Available Documents</h3>
-          
-          <div className="space-y-2">
-            <Card className={`hover:bg-secondary ${location.pathname === "/" ? "border-primary/50 bg-secondary/50" : "bg-secondary/20 border-muted"}`}>
-              <Button 
-                variant="ghost"
-                className="w-full justify-start gap-2 p-3"
-                onClick={() => {
-                  // Create and load a sample document
-                  localStorage.setItem('uploadedFileName', 'Sample Document.pdf');
-                  localStorage.setItem('uploadedFileType', 'application/pdf');
-                  navigate("/");
-                  // The sample document will be loaded on the index page
-                }}
-              >
-                <FileCheck className="h-4 w-4 text-primary" />
-                <div className="text-left">
-                  <p className="font-medium">Sample Document.pdf</p>
-                  <p className="text-xs text-muted-foreground">Example document for testing</p>
-                </div>
-              </Button>
-            </Card>
-            
-            <Card className="bg-secondary/20 border-muted hover:bg-secondary/30">
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start gap-2 p-3"
-                onClick={() => navigate("/upload")}
-              >
-                <Upload className="h-4 w-4 text-muted-foreground" />
-                <div className="text-left">
-                  <p className="font-medium">Upload a file</p>
-                  <p className="text-xs text-muted-foreground">Add from the upload page</p>
-                </div>
-              </Button>
-            </Card>
-            
-            <Card className="bg-secondary/20 border-muted hover:bg-secondary/30">
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start gap-2 p-3"
-                onClick={() => navigate("/upload")}
-              >
-                <Youtube className="h-4 w-4 text-red-500" />
-                <div className="text-left">
-                  <p className="font-medium">Add a YouTube video</p>
-                  <p className="text-xs text-muted-foreground">Add from the upload page</p>
-                </div>
-              </Button>
-            </Card>
-          </div>
-        </div>
-      </ScrollArea>
-      
-      <div className="px-4 mt-auto p-4">
+      <div className="px-4 mt-auto p-4 absolute bottom-0 w-full">
         <Separator className="mb-4" />
         <p className="text-xs text-muted-foreground text-center">
-          Upload documents to ask questions about their content
+          Document Assistant v1.0
         </p>
       </div>
     </div>

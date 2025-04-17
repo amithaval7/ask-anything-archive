@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Send, Loader2, HelpCircle } from "lucide-react";
+import { Send, Loader2, HelpCircle, Save, Check } from "lucide-react";
 import { askQuestionAboutDocument } from "@/services/aiService";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -12,21 +12,23 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 interface QuestionInterfaceProps {
   documentType: "pdf" | "doc" | "txt" | "youtube";
   documentContent: string | null;
+  documentTitle: string;
 }
 
 interface Message {
   role: "user" | "system";
   content: string;
   timestamp: Date;
+  saved?: boolean;
 }
 
-export const QuestionInterface = ({ documentType, documentContent }: QuestionInterfaceProps) => {
+export const QuestionInterface = ({ documentType, documentContent, documentTitle }: QuestionInterfaceProps) => {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "system",
       content: documentContent 
-        ? `I've analyzed your ${documentType === "youtube" ? "YouTube video" : documentType.toUpperCase() + " document"}. Ask any questions about it, and I'll help answer them based on the content.`
+        ? `I've analyzed your ${documentType === "youtube" ? "YouTube video" : documentType.toUpperCase() + " document"}: "${documentTitle}". Ask any questions about it, and I'll help answer them based on the content.`
         : `Upload a document to start asking questions.`,
       timestamp: new Date(),
     },
@@ -38,6 +40,31 @@ export const QuestionInterface = ({ documentType, documentContent }: QuestionInt
     // Scroll to bottom when messages change
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Load saved messages for this document if any
+  useEffect(() => {
+    const savedKey = `saved-qa-${documentTitle.replace(/\s+/g, '-')}`;
+    const savedMessages = localStorage.getItem(savedKey);
+    
+    if (savedMessages) {
+      try {
+        const parsedMessages: Message[] = JSON.parse(savedMessages);
+        // Add the initial system message if it's not already there
+        if (parsedMessages.length > 0 && parsedMessages[0].role !== "system") {
+          parsedMessages.unshift({
+            role: "system",
+            content: documentContent 
+              ? `I've analyzed your ${documentType === "youtube" ? "YouTube video" : documentType.toUpperCase() + " document"}: "${documentTitle}". Ask any questions about it, and I'll help answer them based on the content.`
+              : `Upload a document to start asking questions.`,
+            timestamp: new Date(),
+          });
+        }
+        setMessages(parsedMessages);
+      } catch (e) {
+        console.error("Error parsing saved messages:", e);
+      }
+    }
+  }, [documentTitle, documentType, documentContent]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,6 +120,35 @@ export const QuestionInterface = ({ documentType, documentContent }: QuestionInt
     }
   };
 
+  const saveConversation = () => {
+    // Skip the first system message when saving
+    const messagesForSave = messages.slice(1);
+    if (messagesForSave.length === 0) {
+      toast.info("No questions to save yet");
+      return;
+    }
+    
+    const savedKey = `saved-qa-${documentTitle.replace(/\s+/g, '-')}`;
+    localStorage.setItem(savedKey, JSON.stringify(messagesForSave));
+    toast.success("Question and answers saved successfully!");
+  };
+
+  const saveIndividualMessage = (index: number) => {
+    if (index <= 0) return; // Don't save the system welcome message
+    
+    const updatedMessages = [...messages];
+    updatedMessages[index] = {
+      ...updatedMessages[index],
+      saved: true
+    };
+    setMessages(updatedMessages);
+    
+    // Also update in localStorage
+    const savedKey = `saved-qa-${documentTitle.replace(/\s+/g, '-')}`;
+    localStorage.setItem(savedKey, JSON.stringify(updatedMessages.slice(1)));
+    toast.success("Message saved!");
+  };
+
   const isSubmitDisabled = !question.trim() || isLoading || !documentContent;
 
   return (
@@ -100,28 +156,35 @@ export const QuestionInterface = ({ documentType, documentContent }: QuestionInt
       <div className="bg-card px-4 py-3 flex justify-between items-center border-b">
         <h3 className="font-medium">Document Q&A Assistant</h3>
         
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <HelpCircle className="h-4 w-4" />
-              <span className="sr-only">Help</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>How to use the document assistant</DialogTitle>
-              <DialogDescription>
-                <div className="mt-4 space-y-3">
-                  <p>1. Make sure you've uploaded a document or selected one from the sidebar.</p>
-                  <p>2. Type your question about the document content in the text box.</p>
-                  <p>3. Click the send button or press Enter to submit your question.</p>
-                  <p>4. The assistant will analyze the document and provide an answer based on the content.</p>
-                  <p className="text-sm text-muted-foreground mt-4">This uses local text processing to find relevant information in your document.</p>
-                </div>
-              </DialogDescription>
-            </DialogHeader>
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={saveConversation} className="flex items-center gap-1">
+            <Save className="h-4 w-4" />
+            <span>Save All</span>
+          </Button>
+          
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <HelpCircle className="h-4 w-4" />
+                <span className="sr-only">Help</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>How to use the document assistant</DialogTitle>
+                <DialogDescription>
+                  <div className="mt-4 space-y-3">
+                    <p>1. Type your question about the document content in the text box below.</p>
+                    <p>2. Click the send button or press Enter to submit your question.</p>
+                    <p>3. The assistant will analyze the document and provide an answer.</p>
+                    <p>4. You can save individual Q&A pairs or the entire conversation using the save buttons.</p>
+                    <p className="text-sm text-muted-foreground mt-4">This uses local text processing to find relevant information in your document.</p>
+                  </div>
+                </DialogDescription>
+              </DialogHeader>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
       
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-secondary/30">
@@ -137,9 +200,23 @@ export const QuestionInterface = ({ documentType, documentContent }: QuestionInt
                   : "bg-background border"
               }`}
             >
-              <p className="whitespace-pre-wrap">{message.content}</p>
+              <div className="flex justify-between items-start">
+                <p className="whitespace-pre-wrap pr-4">{message.content}</p>
+                {message.role !== "system" && index > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 w-6 p-0 mt-0 ml-2 opacity-80 hover:opacity-100"
+                    title={message.saved ? "Saved" : "Save this Q&A"}
+                    disabled={message.saved}
+                    onClick={() => saveIndividualMessage(index)}
+                  >
+                    {message.saved ? <Check className="h-3 w-3" /> : <Save className="h-3 w-3" />}
+                  </Button>
+                )}
+              </div>
               <p className="text-xs opacity-70 mt-1">
-                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </p>
             </div>
           </div>
@@ -177,23 +254,18 @@ export const QuestionInterface = ({ documentType, documentContent }: QuestionInt
               }
             }}
           />
-          <div className="flex flex-col">
-            <Button 
-              type="submit" 
-              size="icon" 
-              disabled={isSubmitDisabled}
-              className="h-[60px] w-[60px]"
-              title={isSubmitDisabled 
-                ? (documentContent ? "Please type a question" : "Upload a document first") 
-                : "Send question"
-              }
-            >
-              <Send className="h-5 w-5" />
-            </Button>
-            {!documentContent && (
-              <p className="text-xs text-muted-foreground mt-1 text-center">Upload<br/>first</p>
-            )}
-          </div>
+          <Button 
+            type="submit" 
+            size="icon" 
+            disabled={isSubmitDisabled}
+            className="h-[60px] w-[60px]"
+            title={isSubmitDisabled 
+              ? (documentContent ? "Please type a question" : "Upload a document first") 
+              : "Send question"
+            }
+          >
+            <Send className="h-5 w-5" />
+          </Button>
         </div>
       </form>
     </Card>

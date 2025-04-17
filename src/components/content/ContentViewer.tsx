@@ -1,7 +1,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, ArrowLeft, Youtube, Loader2 } from "lucide-react";
+import { FileText, Youtube, Loader2 } from "lucide-react";
 import { QuestionInterface } from "./QuestionInterface";
 import { ApiKeyInput } from "@/components/settings/ApiKeyInput";
 import { useEffect, useState } from "react";
@@ -13,10 +13,9 @@ interface ContentViewerProps {
   title: string;
   file?: File;
   videoId?: string;
-  onBack?: () => void;
 }
 
-export const ContentViewer = ({ type, title, file, videoId, onBack }: ContentViewerProps) => {
+export const ContentViewer = ({ type, title, file, videoId }: ContentViewerProps) => {
   const [extractedText, setExtractedText] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -53,11 +52,6 @@ export const ContentViewer = ({ type, title, file, videoId, onBack }: ContentVie
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        {onBack && (
-          <Button variant="outline" size="sm" onClick={onBack} className="mr-2">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back
-          </Button>
-        )}
         <div className="flex items-center gap-2 bg-muted px-4 py-2 rounded-lg flex-1">
           {type === "youtube" ? (
             <Youtube className="h-5 w-5 text-red-500 flex-shrink-0" />
@@ -96,7 +90,11 @@ export const ContentViewer = ({ type, title, file, videoId, onBack }: ContentVie
 
         <Card className="p-6">
           <h2 className="text-lg font-medium mb-3">Ask Questions About This Document</h2>
-          <QuestionInterface documentType={type} documentContent={extractedText} />
+          <QuestionInterface 
+            documentType={type} 
+            documentContent={extractedText}
+            documentTitle={title} 
+          />
         </Card>
       </div>
     </div>

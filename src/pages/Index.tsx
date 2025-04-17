@@ -1,150 +1,150 @@
 
 import { ArchiveLayout } from "@/components/layout/ArchiveLayout";
-import { ContentViewer } from "@/components/content/ContentViewer";
-import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ApiKeyInput } from "@/components/settings/ApiKeyInput";
-import { FileText, Upload, Youtube } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { FileText, Youtube, FileType, File, ArrowRight, CheckCircle } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
-  const [hasLocalUpload, setHasLocalUpload] = useState<boolean>(false);
-
-  useEffect(() => {
-    // Check localStorage for previously uploaded content
-    const savedFileName = localStorage.getItem('uploadedFileName');
-    const savedVideoId = localStorage.getItem('youtubeVideoId');
-    
-    if (savedFileName || savedVideoId) {
-      setHasLocalUpload(true);
-    }
-  }, []);
-
-  const handleFileUploaded = (file: File) => {
-    setUploadedFile(file);
-    setYoutubeVideoId(null); // Clear YouTube video if a file is uploaded
-  };
-
-  const handleYoutubeIdSubmitted = (videoId: string) => {
-    setYoutubeVideoId(videoId);
-    setUploadedFile(null); // Clear uploaded file if a YouTube video is added
-  };
-
-  const handleContinueWithSample = () => {
-    // Create a sample file to demonstrate the application
-    const sampleFile = new File(["This is a sample document for testing purposes. It contains text that you can ask questions about."], 
-      "Sample Document.pdf", 
-      { type: "application/pdf" }
-    );
-    setUploadedFile(sampleFile);
-  };
 
   return (
     <ArchiveLayout>
-      <div className="max-w-5xl mx-auto space-y-6">
-        {!uploadedFile && !youtubeVideoId ? (
-          <div className="grid gap-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">Document Assistant</h1>
-                <p className="text-muted-foreground">
-                  Upload a document to ask questions about its content
-                </p>
-              </div>
-              <ApiKeyInput />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="shadow-md overflow-hidden border-muted hover:border-primary/30 transition-all">
-                <CardHeader className="bg-secondary/50 border-b">
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Sample Document
-                  </CardTitle>
-                  <CardDescription>
-                    Try out the assistant with our sample document
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Use our pre-loaded sample document to explore the document assistant functionality.
-                  </p>
-                  <Button 
-                    className="w-full" 
-                    onClick={handleContinueWithSample}
-                  >
-                    Continue with Sample
-                  </Button>
-                </CardContent>
-              </Card>
-              
-              <Card className="shadow-md overflow-hidden border-muted hover:border-primary/30 transition-all">
-                <CardHeader className="bg-secondary/50 border-b">
-                  <CardTitle className="flex items-center gap-2">
-                    <Upload className="h-5 w-5" />
-                    Upload Document
-                  </CardTitle>
-                  <CardDescription>
-                    Upload your own document to analyze
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Upload a PDF, Word, or text file to ask questions about its content.
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    className="w-full" 
-                    onClick={() => navigate("/upload")}
-                  >
-                    Go to Upload Page
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-            
-            {hasLocalUpload && (
-              <Card className="p-4 bg-secondary/30 border-primary/20">
-                <div className="flex items-center justify-between">
-                  <p>
-                    You have previously uploaded documents.
-                  </p>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-primary"
-                    onClick={() => setHasLocalUpload(false)}
-                  >
-                    Check Sidebar
-                  </Button>
+      <div className="max-w-5xl mx-auto space-y-8 p-6">
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl font-bold tracking-tight">Document Assistant</h1>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Upload documents or YouTube videos and ask questions to get instant answers based on the content.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-8 mt-12">
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle>How It Works</CardTitle>
+              <CardDescription>Simple steps to get started</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-3 items-start">
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <span className="text-primary font-bold">1</span>
                 </div>
-              </Card>
-            )}
+                <div>
+                  <h3 className="font-medium">Upload Your Document</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Select a PDF, Word document, text file, or YouTube video to analyze
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 items-start">
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <span className="text-primary font-bold">2</span>
+                </div>
+                <div>
+                  <h3 className="font-medium">Wait for Processing</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Our system extracts and analyzes the content of your document
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 items-start">
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <span className="text-primary font-bold">3</span>
+                </div>
+                <div>
+                  <h3 className="font-medium">Ask Questions</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Get instant answers based on the content of your document
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 items-start">
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <span className="text-primary font-bold">4</span>
+                </div>
+                <div>
+                  <h3 className="font-medium">Save Your Insights</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Save your question and answer pairs for future reference
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle>Get Started Now</CardTitle>
+              <CardDescription>Choose what type of document to upload</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start gap-2 py-6" 
+                onClick={() => navigate('/upload/pdf')}
+              >
+                <FileText className="h-5 w-5 text-red-500" />
+                <span className="flex-1 text-left">Upload a PDF Document</span>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="w-full justify-start gap-2 py-6" 
+                onClick={() => navigate('/upload/word')}
+              >
+                <File className="h-5 w-5 text-blue-500" />
+                <span className="flex-1 text-left">Upload a Word Document</span>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="w-full justify-start gap-2 py-6" 
+                onClick={() => navigate('/upload/text')}
+              >
+                <FileType className="h-5 w-5 text-gray-500" />
+                <span className="flex-1 text-left">Upload a Text File</span>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="w-full justify-start gap-2 py-6" 
+                onClick={() => navigate('/upload/youtube')}
+              >
+                <Youtube className="h-5 w-5 text-red-500" />
+                <span className="flex-1 text-left">Add a YouTube Video</span>
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <Card className="bg-secondary/30 border-primary/20 p-4">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="h-6 w-6 text-green-600" />
+            <div>
+              <h3 className="font-medium">Try Our Sample Document</h3>
+              <p className="text-sm text-muted-foreground">
+                Experience the system with our pre-loaded sample
+              </p>
+            </div>
+            <Button 
+              className="ml-auto" 
+              onClick={() => {
+                localStorage.setItem('uploadedFileName', 'Sample Document.pdf');
+                localStorage.setItem('uploadedFileType', 'application/pdf');
+                navigate("/documents/sample");
+              }}
+            >
+              View Sample
+            </Button>
           </div>
-        ) : (
-          <ContentViewer 
-            type={
-              youtubeVideoId 
-                ? "youtube" 
-                : uploadedFile?.type.includes("pdf") 
-                  ? "pdf" 
-                  : uploadedFile?.type.includes("word") || uploadedFile?.type.includes("doc") 
-                    ? "doc" 
-                    : "txt"
-            } 
-            title={uploadedFile?.name || (youtubeVideoId ? "YouTube Video" : "")}
-            file={uploadedFile || undefined}
-            videoId={youtubeVideoId || undefined}
-            onBack={() => {
-              setUploadedFile(null);
-              setYoutubeVideoId(null);
-            }}
-          />
-        )}
+        </Card>
       </div>
     </ArchiveLayout>
   );
