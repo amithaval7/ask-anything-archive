@@ -2,7 +2,6 @@
 import { ArchiveLayout } from "@/components/layout/ArchiveLayout";
 import { ContentViewer } from "@/components/content/ContentViewer";
 import { useState, useEffect } from "react";
-import { FileUploader } from "@/components/upload/FileUploader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiKeyInput } from "@/components/settings/ApiKeyInput";
 import { FileText, Upload, Youtube } from "lucide-react";
@@ -36,9 +35,12 @@ const Index = () => {
   };
 
   const handleContinueWithSample = () => {
-    // Use the sample document
-    // This is just a placeholder - in a real app, we would load a sample document
-    setUploadedFile(new File(["Sample document content"], "Sample Document.pdf", { type: "application/pdf" }));
+    // Create a sample file to demonstrate the application
+    const sampleFile = new File(["This is a sample document for testing purposes. It contains text that you can ask questions about."], 
+      "Sample Document.pdf", 
+      { type: "application/pdf" }
+    );
+    setUploadedFile(sampleFile);
   };
 
   return (
@@ -57,7 +59,7 @@ const Index = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="shadow-md overflow-hidden border-muted">
+              <Card className="shadow-md overflow-hidden border-muted hover:border-primary/30 transition-all">
                 <CardHeader className="bg-secondary/50 border-b">
                   <CardTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5" />
@@ -80,7 +82,7 @@ const Index = () => {
                 </CardContent>
               </Card>
               
-              <Card className="shadow-md overflow-hidden border-muted">
+              <Card className="shadow-md overflow-hidden border-muted hover:border-primary/30 transition-all">
                 <CardHeader className="bg-secondary/50 border-b">
                   <CardTitle className="flex items-center gap-2">
                     <Upload className="h-5 w-5" />

@@ -1,7 +1,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, ArrowLeft, Youtube } from "lucide-react";
+import { FileText, ArrowLeft, Youtube, Loader2 } from "lucide-react";
 import { QuestionInterface } from "./QuestionInterface";
 import { ApiKeyInput } from "@/components/settings/ApiKeyInput";
 import { useEffect, useState } from "react";
@@ -27,9 +27,16 @@ export const ContentViewer = ({ type, title, file, videoId, onBack }: ContentVie
         if (file) {
           const text = await extractTextFromFile(file);
           setExtractedText(text);
+          
+          // Store this in localStorage for future reference
+          localStorage.setItem('uploadedFileName', file.name);
+          localStorage.setItem('uploadedFileType', file.type);
         } else if (videoId) {
           const text = await extractTextFromYouTube(videoId);
           setExtractedText(text);
+          
+          // Store YouTube ID in localStorage
+          localStorage.setItem('youtubeVideoId', videoId);
         }
       } catch (error) {
         console.error("Error processing content:", error);
@@ -66,14 +73,14 @@ export const ContentViewer = ({ type, title, file, videoId, onBack }: ContentVie
         <ApiKeyInput />
       </div>
 
-      <Card className="p-6">
-        <div className="mb-6">
-          <h2 className="text-lg font-medium mb-2">Document Preview</h2>
-          <div className="bg-muted rounded-lg p-4 max-h-40 overflow-y-auto text-sm">
+      <div className="grid gap-6">
+        <Card className="p-6">
+          <h2 className="text-lg font-medium mb-3">Document Preview</h2>
+          <div className="bg-muted rounded-lg p-4 max-h-[200px] overflow-y-auto text-sm">
             {isLoading ? (
               <div className="flex justify-center items-center py-4">
-                <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full"></div>
-                <span className="ml-2">Processing document...</span>
+                <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                <span>Processing document...</span>
               </div>
             ) : extractedText ? (
               <p className="whitespace-pre-line">{extractedText.slice(0, 500)}...</p>
@@ -85,13 +92,13 @@ export const ContentViewer = ({ type, title, file, videoId, onBack }: ContentVie
               </p>
             )}
           </div>
-        </div>
-        
-        <div>
-          <h2 className="text-lg font-medium mb-2">Ask Questions</h2>
+        </Card>
+
+        <Card className="p-6">
+          <h2 className="text-lg font-medium mb-3">Ask Questions About This Document</h2>
           <QuestionInterface documentType={type} documentContent={extractedText} />
-        </div>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };
